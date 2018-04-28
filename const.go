@@ -3,6 +3,7 @@ package smux
 const (
 	START_STREAM_ID_OF_CLIENT = 1
 	START_STREAM_ID_OF_SERVER = 2
+	MAX_STREAM_ID             = 1 << 31 // 2,147,483,648
 
 	NUM_BYTES_HEADER      = 8
 	NUM_BYTES_MAX_PAYLOAD = 1 << 14 // 16384 bytes = 16kb

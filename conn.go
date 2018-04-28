@@ -62,7 +62,10 @@ func (c *Conn) Accept() (Stream, error) {
 
 func (c *Conn) Stream() (Stream, error) {
 	stream := make(chan []byte, 10)
-	id := c.counter.Get()
+	id, err := c.counter.Get()
+	if err != nil {
+		return NewStream(id, stream, c), err
+	}
 	c.streams.Store(id, stream)
 	return NewStream(id, stream, c), nil
 }

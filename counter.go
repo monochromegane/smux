@@ -1,6 +1,9 @@
 package smux
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 type Counter struct {
 	sync.Mutex
@@ -13,9 +16,18 @@ func NewCounter(init uint32) *Counter {
 	}
 }
 
-func (c *Counter) Get() uint32 {
+func (c *Counter) Get() (uint32, error) {
 	c.Lock()
 	defer c.Unlock()
+	if c.current+2 > MAX_STREAM_ID {
+		return 0, nil
+	}
 	c.current += 2
-	return c.current
+	return c.current, nil
+}
+
+type ExceedError struct{}
+
+func (e ExceedError) Error() string {
+	return fmt.Sprintf("Exceeded max stream id: %d", MAX_STREAM_ID)
 }
