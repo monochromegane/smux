@@ -22,23 +22,23 @@ func (c *Conn) Listen() {
 		if err == io.EOF {
 			break
 		}
-		header := NewFrameHeader(buf)
+		length, _, flag, streamId := headerFromBytes(buf)
 
-		if header.length > 0 {
+		if length > 0 {
 			// Read payload
-			payload := make([]byte, header.length)
+			payload := make([]byte, length)
 			_, err = c.Conn.Read(payload)
 			if err == io.EOF {
 				break
 			}
 
 			// Write payload to stream
-			if _, ok := c.streams.Load(header.streamId); !ok {
+			if _, ok := c.streams.Load(streamId); !ok {
 				stream := make(chan []byte, 10)
-				c.streams.Store(header.streamId, stream)
-				c.ch <- NewStream(header.streamId, stream, c)
+				c.streams.Store(streamId, stream)
+				c.ch <- NewStream(streamId, stream, c)
 			}
-			v, _ := c.streams.Load(header.streamId)
+			v, _ := c.streams.Load(streamId)
 			stream := v.(chan []byte)
 			select {
 			case stream <- payload:
@@ -46,11 +46,11 @@ func (c *Conn) Listen() {
 				// TODO: recover
 			}
 		}
-		if header.flag == 1 {
-			if v, ok := c.streams.Load(header.streamId); ok {
+		if flag == FLAG_DATA_END_STREAM {
+			if v, ok := c.streams.Load(streamId); ok {
 				stream := v.(chan []byte)
 				close(stream)
-				c.streams.Delete(header.streamId)
+				c.streams.Delete(streamId)
 			}
 		}
 	}

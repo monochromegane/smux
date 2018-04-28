@@ -5,13 +5,6 @@ import (
 	"math"
 )
 
-type FrameHeader struct {
-	length   uint16
-	typ      uint8
-	flag     uint8
-	streamId uint32
-}
-
 func NewEndStreamFrame(id uint32) []byte {
 	frame := make([]byte, NUM_BYTES_HEADER)
 
@@ -29,9 +22,11 @@ func NewFrame(id uint32, b []byte, once bool) [][]byte {
 		length := NUM_BYTES_MAX_PAYLOAD
 		typ := TYPE_DATA
 		flag := FLAG_DATA_NONE
-		if once && i == numFrames-1 {
+		if i == numFrames-1 {
 			length = len(b) - (i * NUM_BYTES_MAX_PAYLOAD)
-			flag = FLAG_DATA_END_STREAM
+			if once {
+				flag = FLAG_DATA_END_STREAM
+			}
 		}
 		frame := make([]byte, NUM_BYTES_HEADER+length)
 
@@ -48,11 +43,9 @@ func NewFrame(id uint32, b []byte, once bool) [][]byte {
 	return frames
 }
 
-func NewFrameHeader(b []byte) FrameHeader {
-	return FrameHeader{
-		length:   binary.BigEndian.Uint16(b[0:2]),
-		typ:      uint8(b[2]),
-		flag:     uint8(b[3]),
-		streamId: binary.BigEndian.Uint32(b[4:]),
-	}
+func headerFromBytes(b []byte) (uint16, uint8, uint8, uint32) {
+	return binary.BigEndian.Uint16(b[0:2]), // length
+		uint8(b[2]), // type
+		uint8(b[3]), // flag
+		binary.BigEndian.Uint32(b[4:]) // stream id
 }
