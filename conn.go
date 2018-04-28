@@ -17,7 +17,7 @@ type Conn struct {
 func (c *Conn) Listen() {
 	for {
 		// Read header
-		buf := make([]byte, 8)
+		buf := make([]byte, NUM_BYTES_HEADER)
 		_, err := c.Conn.Read(buf)
 		if err == io.EOF {
 			break

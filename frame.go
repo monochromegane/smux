@@ -12,41 +12,36 @@ type FrameHeader struct {
 	streamId uint32
 }
 
-const (
-	// MAX_PAYLOAD = 2048
-	MAX_PAYLOAD = 5
-)
-
 func NewEndStreamFrame(id uint32) []byte {
-	frame := make([]byte, 8)
+	frame := make([]byte, NUM_BYTES_HEADER)
 
 	binary.BigEndian.PutUint16(frame[0:2], uint16(0))
-	frame[2] = uint8(0)
-	frame[3] = uint8(1)
+	frame[2] = uint8(TYPE_DATA)
+	frame[3] = uint8(FLAG_DATA_END_STREAM)
 	binary.BigEndian.PutUint32(frame[4:8], id)
 	return frame
 }
 
 func NewFrame(id uint32, b []byte, once bool) [][]byte {
-	numFrames := int(math.Ceil(float64(len(b)) / float64(MAX_PAYLOAD)))
+	numFrames := int(math.Ceil(float64(len(b)) / float64(NUM_BYTES_MAX_PAYLOAD)))
 	frames := make([][]byte, numFrames)
 	for i := 0; i < numFrames; i++ {
-		length := MAX_PAYLOAD
-		typ := 0
-		flag := 0
+		length := NUM_BYTES_MAX_PAYLOAD
+		typ := TYPE_DATA
+		flag := FLAG_DATA_NONE
 		if once && i == numFrames-1 {
-			length = len(b) - (i * MAX_PAYLOAD)
-			flag = 1
+			length = len(b) - (i * NUM_BYTES_MAX_PAYLOAD)
+			flag = FLAG_DATA_END_STREAM
 		}
-		frame := make([]byte, 8+length)
+		frame := make([]byte, NUM_BYTES_HEADER+length)
 
 		binary.BigEndian.PutUint16(frame[0:2], uint16(length))
 		frame[2] = uint8(typ)
 		frame[3] = uint8(flag)
 		binary.BigEndian.PutUint32(frame[4:8], id)
-		payload := b[i*MAX_PAYLOAD : i*MAX_PAYLOAD+length]
+		payload := b[i*NUM_BYTES_MAX_PAYLOAD : i*NUM_BYTES_MAX_PAYLOAD+length]
 		for j, _ := range payload {
-			frame[8+j] = payload[j]
+			frame[NUM_BYTES_HEADER+j] = payload[j]
 		}
 		frames[i] = frame
 	}

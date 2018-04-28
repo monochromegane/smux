@@ -18,6 +18,6 @@ func (l Listener) Accept() (*Conn, error) {
 		Conn:    conn,
 		streams: sync.Map{},
 		ch:      make(chan Stream, 1),
-		counter: NewCounter(2),
+		counter: NewCounter(START_STREAM_ID_OF_SERVER),
 	}, nil
 }

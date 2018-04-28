@@ -22,6 +22,6 @@ func Dial(network, address string) (*Conn, error) {
 		Conn:    conn,
 		streams: sync.Map{},
 		ch:      make(chan Stream, 1),
-		counter: NewCounter(1),
+		counter: NewCounter(START_STREAM_ID_OF_CLIENT),
 	}, nil
 }
