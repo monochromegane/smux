@@ -36,7 +36,7 @@ func (s Stream) Read(b []byte) (int, error) {
 }
 
 func (s Stream) Write(b []byte) (int, error) {
-	frames := NewFrame(s.id, b, false)
+	frames := packing(s.id, b, false)
 	sum := 0
 	for i, _ := range frames {
 		n, err := s.conn.Write(frames[i])
@@ -49,6 +49,6 @@ func (s Stream) Write(b []byte) (int, error) {
 }
 
 func (s Stream) Close() error {
-	_, err := s.conn.Write(NewEndStreamFrame(s.id))
+	_, err := s.conn.Write(sealing(s.id))
 	return err
 }

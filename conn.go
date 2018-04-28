@@ -22,7 +22,7 @@ func (c *Conn) Listen() {
 		if err == io.EOF {
 			break
 		}
-		length, _, flag, streamId := headerFromBytes(buf)
+		length, _, flag, streamId := parseHeader(buf)
 
 		if length > 0 {
 			// Read payload
