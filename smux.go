@@ -5,20 +5,20 @@ import (
 	"sync"
 )
 
-func Listen(network, address string) (*Listener, error) {
+func Listen(network, address string) (Listener, error) {
 	listener, err := net.Listen(network, address)
 	if err != nil {
-		return nil, err
+		return Listener{}, err
 	}
-	return &Listener{listener}, nil
+	return Listener{listener}, nil
 }
 
-func Dial(network, address string) (*Conn, error) {
+func Dial(network, address string) (Conn, error) {
 	conn, err := net.Dial(network, address)
 	if err != nil {
-		return nil, err
+		return Conn{}, err
 	}
-	return &Conn{
+	return Conn{
 		Conn:    conn,
 		streams: sync.Map{},
 		ch:      make(chan Stream, 1),
