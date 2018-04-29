@@ -1,7 +1,7 @@
 package smux
 
 import (
-	"fmt"
+	"errors"
 	"sync"
 )
 
@@ -26,8 +26,4 @@ func (c *Counter) Get() (uint32, error) {
 	return c.current, nil
 }
 
-type ExceedError struct{}
-
-func (e ExceedError) Error() string {
-	return fmt.Sprintf("Exceeded max stream id: %d", MAX_STREAM_ID)
-}
+var ExceedError = errors.New("Exceeded max stream id")
