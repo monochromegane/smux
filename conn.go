@@ -1,6 +1,7 @@
 package smux
 
 import (
+	"bytes"
 	"io"
 	"net"
 	"sync"
@@ -15,22 +16,42 @@ type Conn struct {
 }
 
 func (c *Conn) Listen() {
+listen:
 	for {
 		// Read header
-		buf := make([]byte, NUM_BYTES_HEADER)
-		_, err := c.Conn.Read(buf)
-		if err == io.EOF {
-			break
+		var buf bytes.Buffer
+		read := 0
+		for {
+			header := make([]byte, NUM_BYTES_HEADER-read)
+			n, err := c.Conn.Read(header)
+			if err != nil || err == io.EOF {
+				break listen
+			}
+			buf.Write(header[:n])
+			read += n
+			if read == NUM_BYTES_HEADER {
+				break
+			}
 		}
-		length, _, flag, streamId := parseHeader(buf)
+		length, _, flag, streamId := parseHeader(buf.Bytes())
 
 		if length > 0 {
 			// Read payload
-			payload := make([]byte, length)
-			_, err = c.Conn.Read(payload)
-			if err == io.EOF {
-				break
+			var buf bytes.Buffer
+			var read uint16
+			for {
+				payload := make([]byte, length-read)
+				n, err := c.Conn.Read(payload)
+				if err != nil || err == io.EOF {
+					break listen
+				}
+				buf.Write(payload[:n])
+				read += uint16(n)
+				if read == length {
+					break
+				}
 			}
+			payload := buf.Bytes()
 
 			// Write payload to stream
 			if _, ok := c.streams.Load(streamId); !ok {
