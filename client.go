@@ -20,11 +20,10 @@ func (c *Client) Post(b []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	_, err = stream.Write(b)
+	_, err = stream.WriteOnce(b)
 	if err != nil {
 		return nil, err
 	}
-	stream.Close()
 
 	go stream.Poll()
 

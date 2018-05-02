@@ -36,8 +36,6 @@ func (s Server) ListenAndServe() error {
 				}
 
 				go func() {
-					defer stream.Close()
-
 					go stream.Poll()
 
 					var buf bytes.Buffer
@@ -54,7 +52,7 @@ func (s Server) ListenAndServe() error {
 					w := bufio.NewWriter(&b)
 					s.Handler.Serve(w, bytes.NewReader(buf.Bytes()))
 					w.Flush()
-					stream.Write(b.Bytes())
+					stream.WriteOnce(b.Bytes())
 				}()
 			}
 		}()
