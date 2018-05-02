@@ -1,6 +1,5 @@
 import pandas as pd
 import matplotlib.pyplot as plt
-from IPython import embed
 
 names = ['proto', 'jobs', 'concurrent', 'sec', 'jobs/sec', 'error', 'error_rate', 'delay']
 df = pd.read_csv('result.txt', header=None, delimiter=',', names=names)
