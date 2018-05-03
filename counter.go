@@ -19,11 +19,12 @@ func NewCounter(init uint32) *Counter {
 func (c *Counter) Get() (uint32, error) {
 	c.Lock()
 	defer c.Unlock()
+	current := c.current
 	if c.current+2 > MAX_STREAM_ID {
 		return 0, nil
 	}
 	c.current += 2
-	return c.current, nil
+	return current, nil
 }
 
 var ExceedError = errors.New("Exceeded max stream id")
