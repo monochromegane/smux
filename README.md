@@ -44,7 +44,7 @@ Benchmark for HTTP and smux.
 ![benchmark](https://user-images.githubusercontent.com/1845486/39556184-79a3e0ba-4eb9-11e8-929d-08a8f3291e04.png)
 
 Benchmark script is [here](https://github.com/monochromegane/smux/blob/master/cmd/bench).
-It runs on MacBook Pro (15-inch, 2017), CPU 2.8 GHz Intel Core i7, memory 16 GB.
+It runs on MacBook Pro (15-inch, 2017), CPU 2.8 GHz Intel Core i7, memory 16 GB. Go version is go1.10.2 darwin/amd64.
 
 ## License
 
