@@ -1,4 +1,4 @@
-# smux
+# smux [![Build Status](https://travis-ci.org/monochromegane/smux.svg?branch=master)](https://travis-ci.org/monochromegane/smux)
 
 smux is a socket multiplexer.
 smux multiplexes one connection with a virtual channel called a stream.
