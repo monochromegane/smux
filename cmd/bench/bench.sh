@@ -6,12 +6,12 @@ key=$3
 
 go build -o bench cmd/bench/main.go
 
-for proto in http http2 smux
+for proto in http http2 smux yamux ssmux
 do
   ./bench -mode server -proto $proto -delay $delay -cert $cert -key $key &
   pid=$!
 
-  for concurrent in 10 50 100 150 200 250 300
+  for concurrent in 10 50 100 150 200 250 300 350
   do
     for i in `seq 5`
     do

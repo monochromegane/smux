@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
@@ -9,11 +10,14 @@ import (
 	"io"
 	"io/ioutil"
 	"math/rand"
+	"net"
 	"net/http"
 	"sync"
 	"time"
 
+	"github.com/hashicorp/yamux"
 	"github.com/monochromegane/smux"
+	ssmux "github.com/xtaci/smux"
 	"golang.org/x/net/http2"
 )
 
@@ -33,7 +37,7 @@ func init() {
 	flag.IntVar(&port, "port", 3000, "number of port")
 	flag.StringVar(&host, "host", "localhost", "hostname")
 	flag.StringVar(&mode, "mode", "server", "server|client")
-	flag.StringVar(&proto, "proto", "smux", "http|http2|smux")
+	flag.StringVar(&proto, "proto", "smux", "http|http2|smux|yamux|ssmux")
 	flag.StringVar(&cert, "cert", "server.crt", "cert file")
 	flag.StringVar(&key, "key", "server.key", "key file")
 	flag.IntVar(&delay, "delay", 10, "Handler running time (Millisecond)")
@@ -94,6 +98,10 @@ func newServer() Server {
 		return newHttp2Server()
 	case "smux":
 		return newSmuxServer()
+	case "yamux":
+		return newYamuxServer()
+	case "ssmux":
+		return newSsmuxServer()
 	default:
 		return newHttpServer()
 	}
@@ -114,6 +122,10 @@ func newClient() Client {
 		return newHttp2Client()
 	case "smux":
 		return newSmuxClient()
+	case "yamux":
+		return newYamuxClient()
+	case "ssmux":
+		return newSsmuxClient()
 	default:
 		return newHttpClient()
 	}
@@ -225,6 +237,228 @@ func (c *SmuxClient) Post() error {
 	}
 	io.Copy(ioutil.Discard, bytes.NewReader(body))
 	return nil
+}
+
+// Yamux
+type YamuxServer struct {
+	responseData []byte
+	listener     net.Listener
+	handler      smux.Handler
+}
+
+func (s YamuxServer) Run() {
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			break
+		}
+		go func() {
+			session, err := yamux.Server(conn, nil)
+			if err != nil {
+				panic(err)
+			}
+			var wg sync.WaitGroup
+			for {
+				stream, err := session.Accept()
+				if err != nil {
+					break
+				}
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					defer stream.Close()
+
+					var buf bytes.Buffer
+					out := make([]byte, 512)
+					read := 0
+					for {
+						n, err := stream.Read(out)
+						if err == io.EOF {
+							break
+						}
+						buf.Write(out[:n])
+						read += n
+						if read == 2727 { // Workaround...
+							break
+						}
+					}
+
+					var b bytes.Buffer
+					w := bufio.NewWriter(&b)
+					s.handler.Serve(w, bytes.NewReader(buf.Bytes()))
+					w.Flush()
+					stream.Write(b.Bytes())
+				}()
+			}
+			wg.Wait()
+		}()
+	}
+
+}
+
+func newYamuxServer() Server {
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		panic(err)
+	}
+	return YamuxServer{
+		listener:     listener,
+		responseData: responseData(),
+		handler:      smux.HandlerFunc(smuxHandler(responseData())),
+	}
+}
+
+type YamuxClient struct {
+	session     *yamux.Session
+	requestData []byte
+}
+
+func (c YamuxClient) Post() error {
+	stream, err := c.session.Open()
+	if err != nil {
+		return err
+	}
+	stream.Write(c.requestData)
+	// stream.Close()
+
+	var buf bytes.Buffer
+	out := make([]byte, 1024)
+	for {
+		n, err := stream.Read(out)
+		if err == io.EOF {
+			break
+		}
+		buf.Write(out[:n])
+	}
+	io.Copy(ioutil.Discard, bytes.NewReader(buf.Bytes()))
+	return nil
+}
+
+func newYamuxClient() Client {
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		panic(err)
+	}
+
+	session, err := yamux.Client(conn, nil)
+	if err != nil {
+		panic(err)
+	}
+	return YamuxClient{
+		session:     session,
+		requestData: requestData(),
+	}
+}
+
+// xtaci/smux
+type SsmuxServer struct {
+	responseData []byte
+	listener     net.Listener
+	handler      smux.Handler
+}
+
+func (s SsmuxServer) Run() {
+	for {
+		conn, err := s.listener.Accept()
+		if err != nil {
+			break
+		}
+		go func() {
+			session, err := ssmux.Server(conn, nil)
+			if err != nil {
+				panic(err)
+			}
+			var wg sync.WaitGroup
+			for {
+				stream, err := session.AcceptStream()
+				if err != nil {
+					break
+				}
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					defer stream.Close()
+
+					var buf bytes.Buffer
+					out := make([]byte, 512)
+					read := 0
+					for {
+						n, err := stream.Read(out)
+						if err == io.EOF {
+							break
+						}
+						buf.Write(out[:n])
+						read += n
+						if read == 2727 { // Workaround...
+							break
+						}
+					}
+
+					var b bytes.Buffer
+					w := bufio.NewWriter(&b)
+					s.handler.Serve(w, bytes.NewReader(buf.Bytes()))
+					w.Flush()
+					stream.Write(b.Bytes())
+				}()
+			}
+			wg.Wait()
+		}()
+	}
+
+}
+
+func newSsmuxServer() Server {
+	listener, err := net.Listen("tcp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		panic(err)
+	}
+	return SsmuxServer{
+		listener:     listener,
+		responseData: responseData(),
+		handler:      smux.HandlerFunc(smuxHandler(responseData())),
+	}
+}
+
+type SsmuxClient struct {
+	session     *ssmux.Session
+	requestData []byte
+}
+
+func (c SsmuxClient) Post() error {
+	stream, err := c.session.OpenStream()
+	if err != nil {
+		return err
+	}
+	stream.Write(c.requestData)
+
+	var buf bytes.Buffer
+	out := make([]byte, 1024)
+	for {
+		n, err := stream.Read(out)
+		if err == io.EOF {
+			break
+		}
+
+		buf.Write(out[:n])
+	}
+	io.Copy(ioutil.Discard, bytes.NewReader(buf.Bytes()))
+	return nil
+}
+
+func newSsmuxClient() Client {
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", host, port))
+	if err != nil {
+		panic(err)
+	}
+
+	session, err := ssmux.Client(conn, nil)
+	if err != nil {
+		panic(err)
+	}
+	return SsmuxClient{
+		session:     session,
+		requestData: requestData(),
+	}
 }
 
 type Request struct {
