@@ -21,7 +21,7 @@ func (c *Counter) Get() (uint32, error) {
 	defer c.Unlock()
 	current := c.current
 	if c.current+2 > MAX_STREAM_ID {
-		return 0, nil
+		return 0, ExceedError
 	}
 	c.current += 2
 	return current, nil
