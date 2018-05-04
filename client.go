@@ -55,10 +55,8 @@ func (c *Client) getStream() (Stream, error) {
 			return Stream{}, err
 		}
 		return conn.Stream()
-	} else {
-		return stream, err
 	}
-
+	return stream, err
 }
 
 func (c *Client) getConn(force bool) (*Conn, error) {
@@ -66,6 +64,9 @@ func (c *Client) getConn(force bool) (*Conn, error) {
 		conn, err := Dial(c.Network, c.Address)
 		if err != nil {
 			return nil, err
+		}
+		if c.conn != nil {
+			c.conn.Close()
 		}
 		go conn.Listen()
 		c.conn = &conn
